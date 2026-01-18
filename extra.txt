@@ -1,0 +1,19 @@
+koordinat pataruman 6.9446° S, 107.5180° E
+
+# 1. Inisialisasi folder jadi repo Git
+git init
+
+# 2. Masukkan file index.html ke 'staging'
+git add index.html
+
+# 3. Kunci perubahannya
+git commit -m "initial commit: map logic and firebase"
+
+# 4. Arahkan ke branch main
+git branch -M main
+
+# 5. Hubungkan ke GitHub (Ganti [URL] dengan link dari GitHub tadi)
+git remote add origin https://github.com/username-kamu/peta-desa-rt-rw.git
+
+# 6. Upload!
+git push -u origin main
