@@ -18,6 +18,10 @@ git remote add origin https://github.com/izzyerudite/peta-desa-rt-rw.git
 # 6. Upload
 git push -u origin main
 
+rival firebase
+randi js html
+izzy geojson dan data map
+
 //
 Paling penting. ada history di atas kanan biar nanti bisa baca apa yang di ganti
 //
