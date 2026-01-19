@@ -17,3 +17,27 @@ git remote add origin https://github.com/username-kamu/peta-desa-rt-rw.git
 
 # 6. Upload!
 git push -u origin main
+
+
+buat git
+Edit File Langsung:
+
+    Klik file index.html.
+
+    Klik ikon Pensil (Edit this file) di pojok kanan atas.
+
+Update Config/Data:
+
+    Cari bagian firebaseConfig, ganti pakai punya kalian.
+
+    Kalau mau ganti teks pop-up, cari bagian kodenya di bawah.
+
+Simpan:
+
+    Klik tombol hijau "Commit changes...".
+
+    Klik "Commit changes" lagi.
+
+Cek Hasil:
+
+    Tunggu 1 menit, buka link GitHub Pages-nya. Webnya bakal otomatis update sendiri.
