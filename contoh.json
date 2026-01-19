@@ -1,0 +1,13 @@
+{
+  "nama_area": "Nama Desa",
+  "rt": "01",
+  "rw": "02",
+  "info": "Dekat balai desa, area rawan banjir.",
+  "kontak": "Pak RW nama (081234xxx)",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [[106.81, -6.20], [106.82, -6.20], [106.82, -6.21], [106.81, -6.21], [106.81, -6.20]]
+    ]
+  }
+}
