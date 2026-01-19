@@ -13,9 +13,9 @@ git commit -m "initial commit: map logic and firebase"
 git branch -M main
 
 # 5. Hubungkan ke GitHub (Ganti [URL] dengan link dari GitHub tadi)
-git remote add origin https://github.com/username-kamu/peta-desa-rt-rw.git
+git remote add origin https://github.com/izzyerudite/peta-desa-rt-rw.git
 
-# 6. Upload!
+# 6. Upload
 git push -u origin main
 
 //
