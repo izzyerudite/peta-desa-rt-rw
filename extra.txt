@@ -18,6 +18,9 @@ git remote add origin https://github.com/username-kamu/peta-desa-rt-rw.git
 # 6. Upload!
 git push -u origin main
 
+//
+Paling penting. ada history di atas kanan biar nanti bisa baca apa yang di ganti
+//
 
 buat git
 Edit File Langsung:
