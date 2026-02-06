@@ -5,28 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Peta Desa RT/RW</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <header class="app-header">
-        <h1>🗺️ Peta Desa RT/RW</h1>
-    </header>
-    
-    <div class="search-container">
-        <input type="text" id="searchInput" class="search-bar" placeholder="Search RT/RW...">
-        <div id="searchResults" class="search-results hidden"></div>
-    </div>
-    
-    <div class="container">
-        <div id="map" class="map-container"></div>
-        <div id="detailsPanel" class="details-panel hidden">
-            <button id="closePanel" class="close-btn">✕</button>
-            <div id="detailsContent"></div>
-        </div>
-    </div>
-    
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="main.js"></script>
-</body>
-</html>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body, #map { width: 100%; height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        #info-panel {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            width: 320px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            padding: 24px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        #info-panel.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: all;
+        }
+        #info-panel h2 { color: #3388ff; font-size: 1.3rem; margin-bottom: 12px; }
+        #info-panel p { color: #666; font-size: 0.95rem; margin: 8px 0; line-height: 1.5; }
+        #info-panel strong { color: #333; }
+        .close-btn { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .close-btn:hover { color: #333; }
+        .loader { text-align: center; padding: 20px; color: #3388ff; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="info-panel">
+        <button class="close-btn" onclick="closePanel()">✕</button>
+        <h2 id="panel-title">Wilayah</h2>
+        <div id="panel-content">
+            <p class="loader">Loading...</p>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
+        const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const MAP_CENTER = [-6.2088, 106.8456]; // Jakarta
+
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Initialize Leaflet Map
+        const map = L.map('map').setView(MAP_CENTER, 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Load and render GeoJSON
+        async function loadMap() {
+            try {
+                const response = await fetch('pataruman.geojson');
+                const geojsonData = await response.json();
+
+                L.geoJSON(geojsonData, {
+                    style: {
+                        color: '#3388ff',
+                        weight: 2,
+                        opacity: 0.8,
+                        fillOpacity: 0.3,
+                        fillColor: '#3388ff'
+                    },
+                    onEachFeature: (feature, layer) => {
+                        layer.on('click', () => onFeatureClick(feature));
+                    }
+                }).addTo(map);
+
+                console.log('✓ GeoJSON loaded');
+            } catch (error) {
+                console.error('Error loading GeoJSON:', error);
+                document.getElementById('panel-content').innerHTML = '<p style="color: red;">Failed to load map data</p>';
+            }
+        }
+
+        // Handle feature click
+        async function onFeatureClick(feature) {
+            const wilayahId = feature.properties?.wilayah_id;
+            if (!wilayahId) {
+                showPanel('Error', '<p>No wilayah_id found</p>');
+                return;
+            }
+
+            showPanel(feature.properties?.name || 'Wilayah', '<p class="loader">Loading official data...</p>');
+
+            try {
+                const { data, error } = await supabase
+                    .from('pengurus')
+                    .select('*')
+                    .eq('wilayah_id', wilayahId);
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    showPanel(feature.properties?.name || 'Wilayah', '<p>No officials registered</p>');
+                    return;
