@@ -181,7 +181,7 @@
         };
 
         async function deleteOfficial(id) {
-            if (!confirm("CONFIRM_PURGE: Are you sure?")) return;
+            if (!confirm("DIHAPUS: APAKAH DIHAPUS?")) return;
             try {
                 const { error } = await sbClient.from('pengurus').delete().eq('id', id);
                 if (error) throw error;
