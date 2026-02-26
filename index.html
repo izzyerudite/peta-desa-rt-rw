@@ -31,37 +31,35 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // 1. Initialize Supabase
-        if (typeof supabase === 'undefined') {
-    const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
-    
-    // Attach it to the window object to avoid redeclaration errors
-    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-}
+       // 1. Initialize Supabase with a UNIQUE variable name
+const SU_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
+const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
 
-        // 2. Initialize Map
-        var map = L.map('map').setView([-6.955, 107.518], 15);
+// Use 'sbClient' instead of 'supabase' to avoid global naming collisions
+const sbClient = window.supabase.createClient(SU_URL, SU_KEY);
 
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
-        }).addTo(map);
+// 2. Initialize Map
+var map = L.map('map').setView([-6.955, 107.518], 15);
 
-        // 3. Database Function
-        async function fetchOfficials(wilayahId) {
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+// 3. Database Function
+async function fetchOfficials(wilayahId) {
     const content = document.getElementById('content');
     
     try {
-        // Use the safe client name
-        const { data, error } = await window.supabaseClient
+        // Querying the 'pengurus' table where 'wilayah_id' matches the GeoJSON ID
+        const { data, error } = await sbClient
             .from('pengurus')
             .select('*')
             .eq('wilayah_id', wilayahId);
 
         if (error) throw error;
 
-        if (data.length === 0) {
-            content.innerHTML = `<h3>ID: ${wilayahId}</h3><p>Tidak ada data pengurus.</p>`;
+        if (!data || data.length === 0) {
+            content.innerHTML = `<h3>ID Wilayah: ${wilayahId}</h3><p>Tidak ada data pengurus di database untuk ID ini.</p>`;
             return;
         }
 
@@ -81,8 +79,8 @@
         content.innerHTML = `<p style="color:red">Error loading data: ${err.message}</p>`;
     }
 }
-        // 4. Load GeoJSON
-       // 4. Load GeoJSON
+
+// 4. Load GeoJSON
 fetch('contoh.geojson')
     .then(res => res.json())
     .then(data => {
@@ -98,13 +96,15 @@ fetch('contoh.geojson')
                     panel.style.display = 'block';
                     content.innerHTML = `<p>Loading officials...</p>`;
                     
-                    // FIX: Check multiple places for the ID
-                    const id = feature.id || (feature.properties && feature.properties.id);
+                    // Try to find the ID in feature.id OR feature.properties.id
+                    const targetId = feature.id || (feature.properties && feature.properties.id);
                     
-                    if (id) {
-                        fetchOfficials(id);
+                    console.log("Clicked Feature ID:", targetId);
+                    
+                    if (targetId) {
+                        fetchOfficials(targetId);
                     } else {
-                        content.innerHTML = `<p style="color:red">Error: No ID found in GeoJSON feature.</p>`;
+                        content.innerHTML = `<p style="color:red">Error: ID tidak ditemukan di file GeoJSON.</p>`;
                     }
                 });
             }
