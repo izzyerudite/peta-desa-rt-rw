@@ -1,60 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Peta Pataruman CRUD</title>
+    <title>Peta Pataruman - Project Zero Style</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; }
-        #map { width: 100vw; height: 100vh; }
-        
-        #info-panel {
-            position: fixed; top: 10px; right: 10px; width: 350px;
-            background: white; z-index: 1000; padding: 20px;
-            display: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            max-height: 90vh; overflow-y: auto;
+        /* Project Zero Aesthetic Overhaul */
+        :root {
+            --pz-blue: #053ef8;
+            --pz-border: #000000;
+            --pz-bg: #ffffff;
+            --pz-gray: #f1f3f4;
+            --pz-text: #202124;
+            --pz-mono: 'Roboto Mono', 'Courier New', monospace;
         }
 
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .close-btn { cursor: pointer; border: none; background: #ff4d4d; color: white; border-radius: 4px; padding: 5px 10px; }
+        body { margin: 0; padding: 0; font-family: 'Open Sans', Arial, sans-serif; color: var(--pz-text); }
+        #map { width: 100vw; height: 100vh; filter: grayscale(0.2); }
+        
+        #info-panel {
+            position: fixed; top: 0; right: 0; width: 380px; height: 100vh;
+            background: var(--pz-bg); z-index: 1000; padding: 30px 20px;
+            display: none; border-left: 1px solid var(--pz-border);
+            box-shadow: -4px 0 15px rgba(0,0,0,0.05);
+            max-height: 100vh; overflow-y: auto;
+        }
 
-        .official-card { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; }
-        .official-card strong { color: #333; display: block; font-size: 1.1em; }
-        .official-card small { color: #666; }
+        .header { 
+            border-bottom: 4px solid var(--pz-border); 
+            margin-bottom: 25px; 
+            padding-bottom: 10px; 
+        }
+        
+        #panel-title { 
+            font-family: var(--pz-mono); 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            margin: 0;
+        }
 
-        .btn-group { margin-top: 10px; display: flex; gap: 5px; }
-        .edit-btn { background: #ffc107; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .delete-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .add-btn { background: #28a745; color: white; width: 100%; border: none; padding: 10px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .close-btn { 
+            cursor: pointer; border: 1px solid var(--pz-border); 
+            background: transparent; color: var(--pz-border); 
+            font-weight: bold; padding: 2px 8px; font-size: 14px;
+        }
+        .close-btn:hover { background: var(--pz-border); color: white; }
 
-        form { background: #eee; padding: 15px; border-radius: 8px; margin-top: 15px; }
-        form input { width: 100%; padding: 8px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .form-btns { display: flex; gap: 5px; }
-        .save-btn { background: #007bff; color: white; border: none; flex: 1; padding: 8px; border-radius: 4px; cursor: pointer; }
-        .cancel-btn { background: #6c757d; color: white; border: none; flex: 1; padding: 8px; border-radius: 4px; cursor: pointer; }
+        .official-card { 
+            background: var(--pz-gray); 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            font-family: var(--pz-mono);
+            font-size: 13px;
+        }
+        
+        .official-card strong { color: var(--pz-blue); font-size: 15px; display: block; margin-bottom: 5px; }
+
+        .btn-group { margin-top: 12px; display: flex; gap: 10px; }
+        .edit-btn { background: transparent; border: 1px solid var(--pz-border); padding: 4px 8px; cursor: pointer; font-family: var(--pz-mono); font-size: 11px; }
+        .delete-btn { background: transparent; color: #d93025; border: 1px solid #d93025; padding: 4px 8px; cursor: pointer; font-family: var(--pz-mono); font-size: 11px; }
+        .edit-btn:hover { background: var(--pz-gray); }
+        .delete-btn:hover { background: #fee; }
+
+        .add-btn { 
+            background: var(--pz-blue); color: white; width: 100%; 
+            border: none; padding: 12px; font-family: var(--pz-mono); 
+            font-weight: bold; cursor: pointer; margin-top: 10px; 
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+
+        form { border: 1px solid var(--pz-border); padding: 15px; margin-top: 15px; background: white; }
+        form label { font-family: var(--pz-mono); font-size: 11px; font-weight: bold; display: block; margin-top: 10px; }
+        form input { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; font-family: var(--pz-mono); box-sizing: border-box; }
+        
+        .form-btns { display: flex; gap: 10px; margin-top: 15px; }
+        .save-btn { background: var(--pz-border); color: white; border: none; flex: 1; padding: 10px; cursor: pointer; font-family: var(--pz-mono); }
+        .cancel-btn { background: transparent; border: 1px solid #ccc; flex: 1; padding: 10px; cursor: pointer; font-family: var(--pz-mono); }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="info-panel">
         <div class="header">
-            <h3 id="panel-title">Wilayah</h3>
-            <button class="close-btn" onclick="closePanel()">✕</button>
+            <h3 id="panel-title">Report: Wilayah</h3>
+            <button class="close-btn" onclick="closePanel()">ESC</button>
         </div>
         <div id="content"></div>
-        <button class="add-btn" id="show-add-form">+ Tambah Pengurus</button>
+        <button class="add-btn" id="show-add-form">Add Entry</button>
         
         <div id="form-container" style="display: none;">
             <form id="official-form">
                 <input type="hidden" id="edit-id">
-                <label>Nama:</label>
+                <label> NAMA</label>
                 <input type="text" id="form-nama" required>
-                <label>Jabatan:</label>
+                <label>JABATAN</label>
                 <input type="text" id="form-jabatan" required>
-                <label>No. Telp:</label>
+                <label>NO_TELP</label>
                 <input type="text" id="form-telp">
                 <div class="form-btns">
-                    <button type="submit" class="save-btn">Simpan</button>
-                    <button type="button" class="cancel-btn" onclick="hideForm()">Batal</button>
+                    <button type="submit" class="save-btn">MASUKAN</button>
+                    <button type="button" class="cancel-btn" onclick="hideForm()">GAGALKAN</button>
                 </div>
             </form>
         </div>
@@ -64,18 +110,15 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // 1. Config
         const SU_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
         const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
         const sbClient = window.supabase.createClient(SU_URL, SU_KEY);
 
         let currentWilayahId = null;
 
-        // 2. Map Init
         var map = L.map('map').setView([-6.955, 107.518], 15);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // 3. READ: Fetch Data
         async function fetchOfficials(wilayahId) {
             currentWilayahId = wilayahId;
             const content = document.getElementById('content');
@@ -91,29 +134,28 @@
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
-                    content.innerHTML = `<p>Belum ada data pengurus.</p>`;
+                    content.innerHTML = `<p style="font-family:monospace; font-size:12px;">[!] NO_DATA_FOUND</p>`;
                 } else {
                     let html = '';
                     data.forEach(p => {
                         html += `
                             <div class="official-card">
-                                <strong>${p.nama}</strong>
-                                <small>${p.jabatan}</small><br>
-                                ${p.no_telp ? `<span>📞 ${p.no_telp}</span>` : ''}
+                                <strong>> ${p.nama}</strong>
+                                <small>Role: ${p.jabatan}</small><br>
+                                ${p.no_telp ? `<small>Telp: ${p.no_telp}</small>` : ''}
                                 <div class="btn-group">
-                                    <button class="edit-btn" onclick='showEditForm(${JSON.stringify(p)})'>Edit</button>
-                                    <button class="delete-btn" onclick="deleteOfficial(${p.id})">Hapus</button>
+                                    <button class="edit-btn" onclick='showEditForm(${JSON.stringify(p)})'>MODIFY</button>
+                                    <button class="delete-btn" onclick="deleteOfficial(${p.id})">PURGE</button>
                                 </div>
                             </div>`;
                     });
                     content.innerHTML = html;
                 }
             } catch (err) {
-                content.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+                content.innerHTML = `<p style="color:red">ERROR_EXC: ${err.message}</p>`;
             }
         }
 
-        // 4. CREATE / UPDATE Logic
         document.getElementById('official-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
@@ -126,33 +168,29 @@
 
             try {
                 if (id) {
-                    // UPDATE
                     const { error } = await sbClient.from('pengurus').update(payload).eq('id', id);
                     if (error) throw error;
                 } else {
-                    // INSERT
                     const { error } = await sbClient.from('pengurus').insert([payload]);
                     if (error) throw error;
                 }
                 fetchOfficials(currentWilayahId);
             } catch (err) {
-                alert("Gagal menyimpan: " + err.message);
+                alert("STASH_ERROR: " + err.message);
             }
         };
 
-        // 5. DELETE Logic
         async function deleteOfficial(id) {
-            if (!confirm("Hapus pengurus ini?")) return;
+            if (!confirm("CONFIRM_PURGE: Are you sure?")) return;
             try {
                 const { error } = await sbClient.from('pengurus').delete().eq('id', id);
                 if (error) throw error;
                 fetchOfficials(currentWilayahId);
             } catch (err) {
-                alert("Gagal menghapus: " + err.message);
+                alert("PURGE_FAILED: " + err.message);
             }
         }
 
-        // 6. UI Helpers
         function showEditForm(p) {
             document.getElementById('form-container').style.display = 'block';
             document.getElementById('edit-id').value = p.id;
@@ -170,17 +208,16 @@
         function hideForm() { document.getElementById('form-container').style.display = 'none'; }
         function closePanel() { document.getElementById('info-panel').style.display = 'none'; }
 
-        // 7. Load Map Layers
         fetch('contoh.geojson')
             .then(res => res.json())
             .then(data => {
                 L.geoJSON(data, {
-                    style: { color: "orange", weight: 3, fillOpacity: 0.5 },
+                    style: { color: "#000", weight: 2, fillOpacity: 0.2, dashArray: '5, 5' },
                     onEachFeature: function(feature, layer) {
                         layer.on('click', function(e) {
                             L.DomEvent.stopPropagation(e);
                             document.getElementById('info-panel').style.display = 'block';
-                            document.getElementById('panel-title').innerText = "Wilayah ID: " + feature.id;
+                            document.getElementById('panel-title').innerText = "NODE_ID: " + feature.id;
                             fetchOfficials(feature.id);
                         });
                     }
