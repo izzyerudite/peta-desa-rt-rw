@@ -1,116 +1,191 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Peta Pataruman Fix</title>
+    <title>Peta Pataruman CRUD</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; font-family: sans-serif; }
-        #map { width: 100vw; height: 100vh; background: #808080; }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f4f9; }
+        #map { width: 100vw; height: 100vh; }
         
         #info-panel {
-            position: fixed; top: 10px; right: 10px; width: 300px;
-            background: white; z-index: 1000; padding: 15px;
-            display: none; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.2);
-            max-height: 80vh; overflow-y: auto;
+            position: fixed; top: 10px; right: 10px; width: 350px;
+            background: white; z-index: 1000; padding: 20px;
+            display: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            max-height: 90vh; overflow-y: auto;
         }
-        .official-card {
-            border-bottom: 1px solid #eee;
-            padding: 10px 0;
-        }
-        .official-card:last-child { border: none; }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .close-btn { cursor: pointer; border: none; background: #ff4d4d; color: white; border-radius: 4px; padding: 5px 10px; }
+
+        .official-card { background: #f9f9f9; border: 1px solid #ddd; padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+        .official-card strong { color: #333; display: block; font-size: 1.1em; }
+        .official-card small { color: #666; }
+
+        .btn-group { margin-top: 10px; display: flex; gap: 5px; }
+        .edit-btn { background: #ffc107; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .delete-btn { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .add-btn { background: #28a745; color: white; width: 100%; border: none; padding: 10px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+
+        form { background: #eee; padding: 15px; border-radius: 8px; margin-top: 15px; }
+        form input { width: 100%; padding: 8px; margin: 5px 0 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .form-btns { display: flex; gap: 5px; }
+        .save-btn { background: #007bff; color: white; border: none; flex: 1; padding: 8px; border-radius: 4px; cursor: pointer; }
+        .cancel-btn { background: #6c757d; color: white; border: none; flex: 1; padding: 8px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="info-panel">
-        <button onclick="this.parentElement.style.display='none'">Close</button>
+        <div class="header">
+            <h3 id="panel-title">Wilayah</h3>
+            <button class="close-btn" onclick="closePanel()">✕</button>
+        </div>
         <div id="content"></div>
+        <button class="add-btn" id="show-add-form">+ Tambah Pengurus</button>
+        
+        <div id="form-container" style="display: none;">
+            <form id="official-form">
+                <input type="hidden" id="edit-id">
+                <label>Nama:</label>
+                <input type="text" id="form-nama" required>
+                <label>Jabatan:</label>
+                <input type="text" id="form-jabatan" required>
+                <label>No. Telp:</label>
+                <input type="text" id="form-telp">
+                <div class="form-btns">
+                    <button type="submit" class="save-btn">Simpan</button>
+                    <button type="button" class="cancel-btn" onclick="hideForm()">Batal</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-       // 1. Initialize Supabase with a UNIQUE variable name
-const SU_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
-const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
+        // 1. Config
+        const SU_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
+        const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
+        const sbClient = window.supabase.createClient(SU_URL, SU_KEY);
 
-// Use 'sbClient' instead of 'supabase' to avoid global naming collisions
-const sbClient = window.supabase.createClient(SU_URL, SU_KEY);
+        let currentWilayahId = null;
 
-// 2. Initialize Map
-var map = L.map('map').setView([-6.955, 107.518], 15);
+        // 2. Map Init
+        var map = L.map('map').setView([-6.955, 107.518], 15);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-}).addTo(map);
+        // 3. READ: Fetch Data
+        async function fetchOfficials(wilayahId) {
+            currentWilayahId = wilayahId;
+            const content = document.getElementById('content');
+            hideForm();
+            
+            try {
+                const { data, error } = await sbClient
+                    .from('pengurus')
+                    .select('*')
+                    .eq('wilayah_id', wilayahId)
+                    .order('created_at', { ascending: true });
 
-// 3. Database Function
-async function fetchOfficials(wilayahId) {
-    const content = document.getElementById('content');
-    
-    try {
-        // Querying the 'pengurus' table where 'wilayah_id' matches the GeoJSON ID
-        const { data, error } = await sbClient
-            .from('pengurus')
-            .select('*')
-            .eq('wilayah_id', wilayahId);
+                if (error) throw error;
 
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-            content.innerHTML = `<h3>ID Wilayah: ${wilayahId}</h3><p>Tidak ada data pengurus di database untuk ID ini.</p>`;
-            return;
+                if (!data || data.length === 0) {
+                    content.innerHTML = `<p>Belum ada data pengurus.</p>`;
+                } else {
+                    let html = '';
+                    data.forEach(p => {
+                        html += `
+                            <div class="official-card">
+                                <strong>${p.nama}</strong>
+                                <small>${p.jabatan}</small><br>
+                                ${p.no_telp ? `<span>📞 ${p.no_telp}</span>` : ''}
+                                <div class="btn-group">
+                                    <button class="edit-btn" onclick='showEditForm(${JSON.stringify(p)})'>Edit</button>
+                                    <button class="delete-btn" onclick="deleteOfficial(${p.id})">Hapus</button>
+                                </div>
+                            </div>`;
+                    });
+                    content.innerHTML = html;
+                }
+            } catch (err) {
+                content.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+            }
         }
 
-        let html = `<h3>Daftar Pengurus (ID: ${wilayahId})</h3>`;
-        data.forEach(p => {
-            html += `
-                <div class="official-card">
-                    <strong>${p.nama}</strong><br>
-                    <small>${p.jabatan}</small><br>
-                    ${p.no_telp ? `<span>📞 ${p.no_telp}</span>` : ''}
-                </div>`;
-        });
-        content.innerHTML = html;
+        // 4. CREATE / UPDATE Logic
+        document.getElementById('official-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const payload = {
+                nama: document.getElementById('form-nama').value,
+                jabatan: document.getElementById('form-jabatan').value,
+                no_telp: document.getElementById('form-telp').value,
+                wilayah_id: currentWilayahId
+            };
 
-    } catch (err) {
-        console.error("Database error:", err);
-        content.innerHTML = `<p style="color:red">Error loading data: ${err.message}</p>`;
-    }
-}
-
-// 4. Load GeoJSON
-fetch('contoh.geojson')
-    .then(res => res.json())
-    .then(data => {
-        L.geoJSON(data, {
-            style: { color: "orange", weight: 3, fillOpacity: 0.5 },
-            onEachFeature: function(feature, layer) {
-                layer.on('click', function(e) {
-                    L.DomEvent.stopPropagation(e);
-                    
-                    const panel = document.getElementById('info-panel');
-                    const content = document.getElementById('content');
-                    
-                    panel.style.display = 'block';
-                    content.innerHTML = `<p>Loading officials...</p>`;
-                    
-                    // Try to find the ID in feature.id OR feature.properties.id
-                    const targetId = feature.id || (feature.properties && feature.properties.id);
-                    
-                    console.log("Clicked Feature ID:", targetId);
-                    
-                    if (targetId) {
-                        fetchOfficials(targetId);
-                    } else {
-                        content.innerHTML = `<p style="color:red">Error: ID tidak ditemukan di file GeoJSON.</p>`;
-                    }
-                });
+            try {
+                if (id) {
+                    // UPDATE
+                    const { error } = await sbClient.from('pengurus').update(payload).eq('id', id);
+                    if (error) throw error;
+                } else {
+                    // INSERT
+                    const { error } = await sbClient.from('pengurus').insert([payload]);
+                    if (error) throw error;
+                }
+                fetchOfficials(currentWilayahId);
+            } catch (err) {
+                alert("Gagal menyimpan: " + err.message);
             }
-        }).addTo(map);
-    })
-    .catch(err => console.error("GeoJSON error:", err));
+        };
+
+        // 5. DELETE Logic
+        async function deleteOfficial(id) {
+            if (!confirm("Hapus pengurus ini?")) return;
+            try {
+                const { error } = await sbClient.from('pengurus').delete().eq('id', id);
+                if (error) throw error;
+                fetchOfficials(currentWilayahId);
+            } catch (err) {
+                alert("Gagal menghapus: " + err.message);
+            }
+        }
+
+        // 6. UI Helpers
+        function showEditForm(p) {
+            document.getElementById('form-container').style.display = 'block';
+            document.getElementById('edit-id').value = p.id;
+            document.getElementById('form-nama').value = p.nama;
+            document.getElementById('form-jabatan').value = p.jabatan;
+            document.getElementById('form-telp').value = p.no_telp || '';
+        }
+
+        document.getElementById('show-add-form').onclick = () => {
+            document.getElementById('official-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('form-container').style.display = 'block';
+        };
+
+        function hideForm() { document.getElementById('form-container').style.display = 'none'; }
+        function closePanel() { document.getElementById('info-panel').style.display = 'none'; }
+
+        // 7. Load Map Layers
+        fetch('contoh.geojson')
+            .then(res => res.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: { color: "orange", weight: 3, fillOpacity: 0.5 },
+                    onEachFeature: function(feature, layer) {
+                        layer.on('click', function(e) {
+                            L.DomEvent.stopPropagation(e);
+                            document.getElementById('info-panel').style.display = 'block';
+                            document.getElementById('panel-title').innerText = "Wilayah ID: " + feature.id;
+                            fetchOfficials(feature.id);
+                        });
+                    }
+                }).addTo(map);
+            });
     </script>
 </body>
 </html>
