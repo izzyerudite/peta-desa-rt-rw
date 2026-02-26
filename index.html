@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Peta Pataruman - Project Zero Style</title>
+    <title>Peta Pataruman</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* Project Zero Aesthetic Overhaul */
+
         :root {
             --pz-blue: #053ef8;
             --pz-border: #000000;
@@ -110,6 +110,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
+        // supabase
         const SU_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
         const SU_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
         const sbClient = window.supabase.createClient(SU_URL, SU_KEY);
@@ -118,7 +119,7 @@
 
         var map = L.map('map').setView([-6.955, 107.518], 15);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
+        //mengambil database dari supabase
         async function fetchOfficials(wilayahId) {
             currentWilayahId = wilayahId;
             const content = document.getElementById('content');
@@ -132,7 +133,7 @@
                     .order('created_at', { ascending: true });
 
                 if (error) throw error;
-
+                // ui data
                 if (!data || data.length === 0) {
                     content.innerHTML = `<p style="font-family:monospace; font-size:12px;">[!] NO_DATA_FOUND</p>`;
                 } else {
@@ -141,7 +142,7 @@
                         html += `
                             <div class="official-card">
                                 <strong>> ${p.nama}</strong>
-                                <small>Role: ${p.jabatan}</small><br>
+                                <small>Jabatan: ${p.jabatan}</small><br>
                                 ${p.no_telp ? `<small>Telp: ${p.no_telp}</small>` : ''}
                                 <div class="btn-group">
                                     <button class="edit-btn" onclick='showEditForm(${JSON.stringify(p)})'>MODIFIKASI</button>
@@ -155,7 +156,7 @@
                 content.innerHTML = `<p style="color:red">ERROR_EXC: ${err.message}</p>`;
             }
         }
-
+        // data 
         document.getElementById('official-form').onsubmit = async (e) => {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
@@ -165,7 +166,7 @@
                 no_telp: document.getElementById('form-telp').value,
                 wilayah_id: currentWilayahId
             };
-
+            // edit
             try {
                 if (id) {
                     const { error } = await sbClient.from('pengurus').update(payload).eq('id', id);
@@ -179,7 +180,7 @@
                 alert("STASH_ERROR: " + err.message);
             }
         };
-
+        // delete
         async function deleteOfficial(id) {
             if (!confirm("DIHAPUS: APAKAH DIHAPUS?")) return;
             try {
@@ -190,7 +191,7 @@
                 alert("PURGE_FAILED: " + err.message);
             }
         }
-
+        // tempat edit data
         function showEditForm(p) {
             document.getElementById('form-container').style.display = 'block';
             document.getElementById('edit-id').value = p.id;
@@ -207,7 +208,7 @@
 
         function hideForm() { document.getElementById('form-container').style.display = 'none'; }
         function closePanel() { document.getElementById('info-panel').style.display = 'none'; }
-
+        // mengambil data geojson (biar peta muncul)
         fetch('contoh.geojson')
             .then(res => res.json())
             .then(data => {
