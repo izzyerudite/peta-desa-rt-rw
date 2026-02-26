@@ -217,7 +217,7 @@
                         layer.on('click', function(e) {
                             L.DomEvent.stopPropagation(e);
                             document.getElementById('info-panel').style.display = 'block';
-                            document.getElementById('panel-title').innerText = "NODE_ID: " + feature.id;
+                            document.getElementById('panel-title').innerText = "WILAYAH: " + feature.id;
                             fetchOfficials(feature.id);
                         });
                     }
