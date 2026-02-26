@@ -1,139 +1,57 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Peta Desa Pataruman</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peta Pataruman Fix</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* CRITICAL: Ensure the map has a height */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; width: 100%; overflow: hidden; }
-        #map { width: 100%; height: 100vh; background: #f0f0f0; }
-
+        body { margin: 0; padding: 0; }
+        #map { width: 100vw; height: 100vh; background: #808080; } /* Gray while loading */
+        
         #info-panel {
-            position: fixed;
-            right: 20px;
-            top: 20px;
-            width: 320px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            padding: 24px;
-            z-index: 1001; /* Higher than Leaflet controls */
-            opacity: 0;
-            transform: translateX(400px);
-            transition: all 0.3s ease;
-            max-height: 80vh;
-            overflow-y: auto;
+            position: fixed; top: 10px; right: 10px; width: 300px;
+            background: white; z-index: 1000; padding: 15px;
+            display: none; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.2);
         }
-
-        #info-panel.active {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .official-card { 
-            border: 1px solid #ddd; 
-            padding: 12px; 
-            border-radius: 8px; 
-            margin-bottom: 12px; 
-            background: #f8f9fa; 
-        }
-        .close-btn { cursor: pointer; float: right; border: none; background: none; font-size: 20px; }
     </style>
 </head>
 <body>
-
     <div id="map"></div>
-
-    <div id="info-panel">
-        <button class="close-btn" onclick="closePanel()">✕</button>
-        <h2 id="panel-title">Wilayah</h2>
-        <div id="panel-content"></div>
+    <div id="info-panel" id="panel">
+        <button onclick="this.parentElement.style.display='none'">Close</button>
+        <div id="content"></div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. SUPABASE CONFIG
-        const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c'; 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 1. Initialize Map - Using the EXACT coordinates from your GeoJSON
+        // Latitude: -6.955, Longitude: 107.518
+        var map = L.map('map').setView([-6.955, 107.518], 15);
 
-        // 2. INITIALIZE MAP (Focused on your GeoJSON coordinates)
-        const map = L.map('map').setView([-6.950, 107.518], 14);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap'
+        // 2. Add Tiles
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
         }).addTo(map);
 
-        // 3. LOAD DATA
+        // 3. Load GeoJSON (No filtering - let's just get it on the screen first)
         fetch('contoh.geojson')
             .then(res => res.json())
             .then(data => {
-                L.geoJson(data, {
-                    style: {
-                        color: '#ff7800',
-                        weight: 3,
-                        fillOpacity: 0.5
-                    },
-                    onEachFeature: (feature, layer) => {
-                        layer.on('click', (e) => {
-                            // Prevent map click from closing panel immediately
-                            L.DomEvent.stopPropagation(e); 
-                            onFeatureClick(feature);
+                console.log("Data loaded:", data); // Check your console (F12)
+                L.geoJSON(data, {
+                    style: { color: "orange", weight: 3, fillOpacity: 0.5 },
+                    onEachFeature: function(feature, layer) {
+                        layer.on('click', function(e) {
+                            L.DomEvent.stopPropagation(e);
+                            const panel = document.getElementById('info-panel');
+                            const content = document.getElementById('content');
+                            panel.style.display = 'block';
+                            content.innerHTML = `<h3>Wilayah ID: ${feature.id}</h3><p>Loading officials...</p>`;
+                            // Trigger your Supabase function here
                         });
-                        layer.bindPopup("Klik untuk detail pengurus");
                     }
                 }).addTo(map);
             })
-            .catch(err => console.error("GeoJSON Load Error:", err));
-
-        // 4. LOGIC
-        async function onFeatureClick(feature) {
-            // Your GeoJSON has "id: 1", Supabase table likely needs this
-            const id = feature.id || 1; 
-            const name = "Desa Pataruman";
-
-            showPanel(name, '<p>Loading...</p>');
-
-            try {
-                const { data, error } = await supabase
-                    .from('pengurus')
-                    .select('*')
-                    .eq('wilayah_id', id);
-
-                if (error) throw error;
-
-                let html = data.length > 0 ? '' : '<p>Tidak ada data pengurus.</p>';
-                data.forEach(p => {
-                    html += `
-                        <div class="official-card">
-                            <strong>${p.nama}</strong><br>
-                            <small>${p.jabatan}</small>
-                        </div>`;
-                });
-                showPanel(name, html);
-            } catch (err) {
-                showPanel("Error", err.message);
-            }
-        }
-
-        function showPanel(title, content) {
-            document.getElementById('panel-title').innerText = title;
-            document.getElementById('panel-content').innerHTML = content;
-            document.getElementById('info-panel').classList.add('active');
-        }
-
-        function closePanel() {
-            document.getElementById('info-panel').classList.remove('active');
-        }
-
-        // Close panel when clicking empty map area
-        map.on('click', closePanel);
-
+            .catch(err => console.error("Could not load GeoJSON file:", err));
     </script>
 </body>
 </html>
