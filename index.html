@@ -8,9 +8,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* CRITICAL: Ensure the map has a height */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body, #map { width: 100%; height: 100vh; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
+        #map { width: 100%; height: 100vh; background: #f0f0f0; }
 
         #info-panel {
             position: fixed;
@@ -21,11 +22,10 @@
             border-radius: 12px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
             padding: 24px;
-            z-index: 1000;
+            z-index: 1001; /* Higher than Leaflet controls */
             opacity: 0;
             transform: translateX(400px);
             transition: all 0.3s ease;
-            pointer-events: none;
             max-height: 80vh;
             overflow-y: auto;
         }
@@ -33,136 +33,96 @@
         #info-panel.active {
             opacity: 1;
             transform: translateX(0);
-            pointer-events: all;
         }
 
-        #info-panel h2 { color: #ff7800; font-size: 1.3rem; margin-bottom: 12px; }
-        #info-panel p { color: #666; font-size: 0.9rem; margin: 8px 0; line-height: 1.5; }
-        #info-panel strong { color: #333; }
-
-        .close-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #999;
+        .official-card { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-bottom: 12px; 
+            background: #f8f9fa; 
         }
-
-        .close-btn:hover { color: #333; }
-        .loader { text-align: center; padding: 20px; color: #ff7800; }
-        .official-card { border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 12px; background: #f8f9fa; }
-        .official-card h3 { margin: 0 0 8px 0; font-size: 1rem; }
-        .official-card p { margin: 4px 0; }
+        .close-btn { cursor: pointer; float: right; border: none; background: none; font-size: 20px; }
     </style>
 </head>
 <body>
+
     <div id="map"></div>
+
     <div id="info-panel">
         <button class="close-btn" onclick="closePanel()">✕</button>
         <h2 id="panel-title">Wilayah</h2>
-        <div id="panel-content">
-            <p class="loader">Loading...</p>
-        </div>
+        <div id="panel-content"></div>
     </div>
 
     <script>
-        // ============================================
-        // SUPABASE CONFIGURATION
-        // ============================================
+        // 1. SUPABASE CONFIG
         const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c'; 
-
-        // PATARUMAN BOUNDS (to filter only Desa Pataruman)
-        const PATARUMAN_BOUNDS = {
-    minLat: -7.000, // Expanded to catch -6.95
-    maxLat: -6.790,
-    minLon: 107.500, // Expanded to catch 107.51
-    maxLon: 107.646
-};
-
-        // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ============================================
-        // MAP INITIALIZATION
-        // ============================================
-        const map = L.map('map').setView([-6.955, 107.518], 14);
+        // 2. INITIALIZE MAP (Focused on your GeoJSON coordinates)
+        const map = L.map('map').setView([-6.950, 107.518], 14);
+
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap'
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // ============================================
-        // LOAD AND FILTER GEOJSON
-        // ============================================
+        // 3. LOAD DATA
         fetch('contoh.geojson')
-    .then(response => response.json())
-    .then(data => {
-        const pataturmanFeatures = data.features.filter(feature => {
-            // Simplified check: if any coord is in bounds
-            const coords = feature.geometry.coordinates[0];
-            return coords.some(coord => {
-                const [lon, lat] = coord;
-                return lat >= PATARUMAN_BOUNDS.minLat && lat <= PATARUMAN_BOUNDS.maxLat;
-            });
-        });
+            .then(res => res.json())
+            .then(data => {
+                L.geoJson(data, {
+                    style: {
+                        color: '#ff7800',
+                        weight: 3,
+                        fillOpacity: 0.5
+                    },
+                    onEachFeature: (feature, layer) => {
+                        layer.on('click', (e) => {
+                            // Prevent map click from closing panel immediately
+                            L.DomEvent.stopPropagation(e); 
+                            onFeatureClick(feature);
+                        });
+                        layer.bindPopup("Klik untuk detail pengurus");
+                    }
+                }).addTo(map);
+            })
+            .catch(err => console.error("GeoJSON Load Error:", err));
 
-                // Render filtered features
-               L.geoJson(pataturmanFeatures, {
-            style: { color: '#ff7800', fillOpacity: 0.4 },
-            onEachFeature: (feature, layer) => {
-                // FIX 2: Correctly trigger the panel on click
-                layer.on('click', (e) => {
-                    L.DomEvent.stopPropagation(e); // Prevent map click from closing panel
-                    onFeatureClick(feature);
-                });
-
-                // Simplified Popup - The layer click above handles the panel logic
-                layer.bindPopup(`<strong>Desa Pataruman</strong><br>Click the area for details`);
-            }
-        }).addTo(map);
-    });
-
-
+        // 4. LOGIC
         async function onFeatureClick(feature) {
-    // Note: Your GeoJSON has "id": 1, but no "properties.wilayah_id"
-    // We will use feature.id as a fallback
-    const wilayahId = feature.properties?.wilayah_id || feature.id;
-    const name = feature.properties?.["DESA PATARUMAN"] || "Desa Pataruman";
+            // Your GeoJSON has "id: 1", Supabase table likely needs this
+            const id = feature.id || 1; 
+            const name = "Desa Pataruman";
 
-    showPanel(name, '<p class="loader">Loading officials...</p>');
+            showPanel(name, '<p>Loading...</p>');
 
-    try {
-        const { data: pengurus, error } = await supabase
-            .from('pengurus')
-            .select('*')
-            .eq('wilayah_id', wilayahId);
+            try {
+                const { data, error } = await supabase
+                    .from('pengurus')
+                    .select('*')
+                    .eq('wilayah_id', id);
 
-        if (error) throw error;
+                if (error) throw error;
 
-        if (!pengurus || pengurus.length === 0) {
-            showPanel(name, `<p>No officials found for ID: ${wilayahId}</p>`);
-            return;
+                let html = data.length > 0 ? '' : '<p>Tidak ada data pengurus.</p>';
+                data.forEach(p => {
+                    html += `
+                        <div class="official-card">
+                            <strong>${p.nama}</strong><br>
+                            <small>${p.jabatan}</small>
+                        </div>`;
+                });
+                showPanel(name, html);
+            } catch (err) {
+                showPanel("Error", err.message);
+            }
         }
 
-        let content = '';
-        pengurus.forEach(off => {
-            content += `<div class="official-card">
-                <h3>${off.nama}</h3>
-                <p><strong>Jabatan:</strong> ${off.jabatan}</p>
-            </div>`;
-        });
-        showPanel(name, content);
-    } catch (err) {
-        showPanel('Error', `<p>${err.message}</p>`);
-    }
-}
-
-
         function showPanel(title, content) {
-            document.getElementById('panel-title').textContent = title;
+            document.getElementById('panel-title').innerText = title;
             document.getElementById('panel-content').innerHTML = content;
             document.getElementById('info-panel').classList.add('active');
         }
@@ -171,8 +131,9 @@
             document.getElementById('info-panel').classList.remove('active');
         }
 
-        // Close panel when clicking outside
+        // Close panel when clicking empty map area
         map.on('click', closePanel);
+
     </script>
 </body>
 </html>
