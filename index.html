@@ -77,11 +77,11 @@
 
         // PATARUMAN BOUNDS (to filter only Desa Pataruman)
         const PATARUMAN_BOUNDS = {
-            minLat: -6.845,
-            maxLat: -6.790,
-            minLon: 107.588,
-            maxLon: 107.646
-        };
+    minLat: -7.000, // Expanded to catch -6.95
+    maxLat: -6.790,
+    minLon: 107.500, // Expanded to catch 107.51
+    maxLon: 107.646
+};
 
         // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -89,96 +89,76 @@
         // ============================================
         // MAP INITIALIZATION
         // ============================================
-        const map = L.map('map').setView([-6.8197, 107.6311], 13);
-
+        const map = L.map('map').setView([-6.955, 107.518], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution: '&copy; OpenStreetMap'
         }).addTo(map);
 
         // ============================================
         // LOAD AND FILTER GEOJSON
         // ============================================
         fetch('contoh.geojson')
-            .then(response => response.json())
-            .then(data => {
-                // Filter to only Pataruman features
-                const pataturmanFeatures = data.features.filter(feature => {
-                    const coords = feature.geometry.coordinates[0];
-                    if (!coords) return false;
-
-                    // Check if any coordinate is within Pataruman bounds
-                    return coords.some(coord => {
-                        const [lon, lat] = coord;
-                        return lat >= PATARUMAN_BOUNDS.minLat &&
-                               lat <= PATARUMAN_BOUNDS.maxLat &&
-                               lon >= PATARUMAN_BOUNDS.minLon &&
-                               lon <= PATARUMAN_BOUNDS.maxLon;
-                    });
-                });
+    .then(response => response.json())
+    .then(data => {
+        const pataturmanFeatures = data.features.filter(feature => {
+            // Simplified check: if any coord is in bounds
+            const coords = feature.geometry.coordinates[0];
+            return coords.some(coord => {
+                const [lon, lat] = coord;
+                return lat >= PATARUMAN_BOUNDS.minLat && lat <= PATARUMAN_BOUNDS.maxLat;
+            });
+        });
 
                 // Render filtered features
-                L.geoJson({ type: 'FeatureCollection', features: pataturmanFeatures }, {
-                    style: {
-                        color: '#ff7800',
-                        weight: 2,
-                        opacity: 0.8,
-                        fillOpacity: 0.4,
-                        fillColor: '#ff7800'
-                    },
-                    onEachFeature: (feature, layer) => {
-                        layer.on('click', () => onFeatureClick(feature));
-                        layer.bindPopup(`<strong>${feature.properties?.name || 'Pataruman'}</strong><br><button onclick="onFeatureClick(event)">View Details</button>`);
-                    }
-                }).addTo(map);
+               L.geoJson(pataturmanFeatures, {
+            style: { color: '#ff7800', fillOpacity: 0.4 },
+            onEachFeature: (feature, layer) => {
+                // FIX 2: Correctly trigger the panel on click
+                layer.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e); // Prevent map click from closing panel
+                    onFeatureClick(feature);
+                });
 
-                console.log(`✓ Loaded ${pataturmanFeatures.length} Pataruman features`);
-            })
-            .catch(error => console.error('Error loading GeoJSON:', error));
+                // Simplified Popup - The layer click above handles the panel logic
+                layer.bindPopup(`<strong>Desa Pataruman</strong><br>Click the area for details`);
+            }
+        }).addTo(map);
+    });
 
 
         async function onFeatureClick(feature) {
-            const wilayahId = feature.properties?.wilayah_id || feature.properties?.id;
+    // Note: Your GeoJSON has "id": 1, but no "properties.wilayah_id"
+    // We will use feature.id as a fallback
+    const wilayahId = feature.properties?.wilayah_id || feature.id;
+    const name = feature.properties?.["DESA PATARUMAN"] || "Desa Pataruman";
 
-            if (!wilayahId) {
-                showPanel(feature.properties?.name || 'Pataruman', '<p>No data available</p>');
-                return;
-            }
+    showPanel(name, '<p class="loader">Loading officials...</p>');
 
-            showPanel(feature.properties?.name || 'Pataruman', '<p class="loader">Loading officials...</p>');
+    try {
+        const { data: pengurus, error } = await supabase
+            .from('pengurus')
+            .select('*')
+            .eq('wilayah_id', wilayahId);
 
-            try {
-                const { data: pengurus, error } = await supabase
-                    .from('pengurus')
-                    .select('*')
-                    .eq('wilayah_id', wilayahId);
+        if (error) throw error;
 
-                if (error) throw error;
-
-                if (!pengurus || pengurus.length === 0) {
-                    showPanel(feature.properties?.name || 'Pataruman', '<p>No officials registered</p>');
-                    return;
-                }
-
-                let content = '';
-                pengurus.forEach(official => {
-                    content += `
-                        <div class="official-card">
-                            <h3>${official.nama}</h3>
-                            <p><strong>Jabatan:</strong> ${official.jabatan}</p>
-                            <p><strong>NIK:</strong> ${official.nik || '-'}</p>
-                            <p><strong>No. Telp:</strong> <a href="tel:${official.no_telp}" style="color: #ff7800; text-decoration: none;">${official.no_telp || '-'}</a></p>
-                            ${official.foto_url ? `<img src="${official.foto_url}" style="width: 100%; border-radius: 6px; margin-top: 8px;">` : ''}
-                        </div>
-                    `;
-                });
-
-                showPanel(feature.properties?.name || 'Pataruman', content);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                showPanel('Error', `<p style="color: red;">Failed to load data: ${error.message}</p>`);
-            }
+        if (!pengurus || pengurus.length === 0) {
+            showPanel(name, `<p>No officials found for ID: ${wilayahId}</p>`);
+            return;
         }
+
+        let content = '';
+        pengurus.forEach(off => {
+            content += `<div class="official-card">
+                <h3>${off.nama}</h3>
+                <p><strong>Jabatan:</strong> ${off.jabatan}</p>
+            </div>`;
+        });
+        showPanel(name, content);
+    } catch (err) {
+        showPanel('Error', `<p>${err.message}</p>`);
+    }
+}
 
 
         function showPanel(title, content) {
