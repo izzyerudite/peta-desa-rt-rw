@@ -32,9 +32,13 @@
 
     <script>
         // 1. Initialize Supabase
-        const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        if (typeof supabase === 'undefined') {
+    const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
+    
+    // Attach it to the window object to avoid redeclaration errors
+    window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
 
         // 2. Initialize Map
         var map = L.map('map').setView([-6.955, 107.518], 15);
@@ -45,38 +49,38 @@
 
         // 3. Database Function
         async function fetchOfficials(wilayahId) {
-            const content = document.getElementById('content');
-            
-            try {
-                const { data, error } = await supabase
-                    .from('pengurus')
-                    .select('*')
-                    .eq('wilayah_id', wilayahId);
+    const content = document.getElementById('content');
+    
+    try {
+        // Use the safe client name
+        const { data, error } = await window.supabaseClient
+            .from('pengurus')
+            .select('*')
+            .eq('wilayah_id', wilayahId);
 
-                if (error) throw error;
+        if (error) throw error;
 
-                if (data.length === 0) {
-                    content.innerHTML += `<p>Tidak ada data pengurus untuk ID: ${wilayahId}</p>`;
-                    return;
-                }
-
-                let html = `<h3>Daftar Pengurus (ID: ${wilayahId})</h3>`;
-                data.forEach(p => {
-                    html += `
-                        <div class="official-card">
-                            <strong>${p.nama}</strong><br>
-                            <small>${p.jabatan}</small><br>
-                            ${p.no_telp ? `<span>📞 ${p.no_telp}</span>` : ''}
-                        </div>`;
-                });
-                content.innerHTML = html;
-
-            } catch (err) {
-                console.error("Database error:", err);
-                content.innerHTML = `<p style="color:red">Error loading data: ${err.message}</p>`;
-            }
+        if (data.length === 0) {
+            content.innerHTML = `<h3>ID: ${wilayahId}</h3><p>Tidak ada data pengurus.</p>`;
+            return;
         }
 
+        let html = `<h3>Daftar Pengurus (ID: ${wilayahId})</h3>`;
+        data.forEach(p => {
+            html += `
+                <div class="official-card">
+                    <strong>${p.nama}</strong><br>
+                    <small>${p.jabatan}</small><br>
+                    ${p.no_telp ? `<span>📞 ${p.no_telp}</span>` : ''}
+                </div>`;
+        });
+        content.innerHTML = html;
+
+    } catch (err) {
+        console.error("Database error:", err);
+        content.innerHTML = `<p style="color:red">Error loading data: ${err.message}</p>`;
+    }
+}
         // 4. Load GeoJSON
        // 4. Load GeoJSON
 fetch('contoh.geojson')
