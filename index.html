@@ -78,28 +78,35 @@
         }
 
         // 4. Load GeoJSON
-        fetch('contoh.geojson')
-            .then(res => res.json())
-            .then(data => {
-                L.geoJSON(data, {
-                    style: { color: "orange", weight: 3, fillOpacity: 0.5 },
-                    onEachFeature: function(feature, layer) {
-                        layer.on('click', function(e) {
-                            L.DomEvent.stopPropagation(e);
-                            
-                            const panel = document.getElementById('info-panel');
-                            const content = document.getElementById('content');
-                            
-                            panel.style.display = 'block';
-                            content.innerHTML = `<p>Loading officials...</p>`;
-                            
-                            // Use feature.id to query Supabase wilayah_id
-                            fetchOfficials(feature.id);
-                        });
+       // 4. Load GeoJSON
+fetch('contoh.geojson')
+    .then(res => res.json())
+    .then(data => {
+        L.geoJSON(data, {
+            style: { color: "orange", weight: 3, fillOpacity: 0.5 },
+            onEachFeature: function(feature, layer) {
+                layer.on('click', function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    
+                    const panel = document.getElementById('info-panel');
+                    const content = document.getElementById('content');
+                    
+                    panel.style.display = 'block';
+                    content.innerHTML = `<p>Loading officials...</p>`;
+                    
+                    // FIX: Check multiple places for the ID
+                    const id = feature.id || (feature.properties && feature.properties.id);
+                    
+                    if (id) {
+                        fetchOfficials(id);
+                    } else {
+                        content.innerHTML = `<p style="color:red">Error: No ID found in GeoJSON feature.</p>`;
                     }
-                }).addTo(map);
-            })
-            .catch(err => console.error("GeoJSON error:", err));
+                });
+            }
+        }).addTo(map);
+    })
+    .catch(err => console.error("GeoJSON error:", err));
     </script>
 </body>
 </html>
