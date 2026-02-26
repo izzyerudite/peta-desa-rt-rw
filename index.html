@@ -4,54 +4,102 @@
     <title>Peta Pataruman Fix</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { margin: 0; padding: 0; }
-        #map { width: 100vw; height: 100vh; background: #808080; } /* Gray while loading */
+        body { margin: 0; padding: 0; font-family: sans-serif; }
+        #map { width: 100vw; height: 100vh; background: #808080; }
         
         #info-panel {
             position: fixed; top: 10px; right: 10px; width: 300px;
             background: white; z-index: 1000; padding: 15px;
             display: none; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            max-height: 80vh; overflow-y: auto;
         }
+        .official-card {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .official-card:last-child { border: none; }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="info-panel" id="panel">
+    <div id="info-panel">
         <button onclick="this.parentElement.style.display='none'">Close</button>
         <div id="content"></div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
-        // 1. Initialize Map - Using the EXACT coordinates from your GeoJSON
-        // Latitude: -6.955, Longitude: 107.518
+        // 1. Initialize Supabase
+        const SUPABASE_URL = 'https://cdvvmvjffmhvnnkqojoc.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNkdnZtdmpmZm1odm5ua3Fvam9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNjUzOTAsImV4cCI6MjA4NTk0MTM5MH0.9zeaJntl-4_nVGpqpiejkqtdLW37TXOkJVjYLM3Ti4c';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // 2. Initialize Map
         var map = L.map('map').setView([-6.955, 107.518], 15);
 
-        // 2. Add Tiles
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap'
         }).addTo(map);
 
-        // 3. Load GeoJSON (No filtering - let's just get it on the screen first)
+        // 3. Database Function
+        async function fetchOfficials(wilayahId) {
+            const content = document.getElementById('content');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('pengurus')
+                    .select('*')
+                    .eq('wilayah_id', wilayahId);
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    content.innerHTML += `<p>Tidak ada data pengurus untuk ID: ${wilayahId}</p>`;
+                    return;
+                }
+
+                let html = `<h3>Daftar Pengurus (ID: ${wilayahId})</h3>`;
+                data.forEach(p => {
+                    html += `
+                        <div class="official-card">
+                            <strong>${p.nama}</strong><br>
+                            <small>${p.jabatan}</small><br>
+                            ${p.no_telp ? `<span>📞 ${p.no_telp}</span>` : ''}
+                        </div>`;
+                });
+                content.innerHTML = html;
+
+            } catch (err) {
+                console.error("Database error:", err);
+                content.innerHTML = `<p style="color:red">Error loading data: ${err.message}</p>`;
+            }
+        }
+
+        // 4. Load GeoJSON
         fetch('contoh.geojson')
             .then(res => res.json())
             .then(data => {
-                console.log("Data loaded:", data); // Check your console (F12)
                 L.geoJSON(data, {
                     style: { color: "orange", weight: 3, fillOpacity: 0.5 },
                     onEachFeature: function(feature, layer) {
                         layer.on('click', function(e) {
                             L.DomEvent.stopPropagation(e);
+                            
                             const panel = document.getElementById('info-panel');
                             const content = document.getElementById('content');
+                            
                             panel.style.display = 'block';
-                            content.innerHTML = `<h3>Wilayah ID: ${feature.id}</h3><p>Loading officials...</p>`;
-                            // Trigger your Supabase function here
+                            content.innerHTML = `<p>Loading officials...</p>`;
+                            
+                            // Use feature.id to query Supabase wilayah_id
+                            fetchOfficials(feature.id);
                         });
                     }
                 }).addTo(map);
             })
-            .catch(err => console.error("Could not load GeoJSON file:", err));
+            .catch(err => console.error("GeoJSON error:", err));
     </script>
 </body>
 </html>
