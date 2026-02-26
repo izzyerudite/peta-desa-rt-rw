@@ -83,16 +83,16 @@
     <div id="map"></div>
     <div id="info-panel">
         <div class="header">
-            <h3 id="panel-title">Report: Wilayah</h3>
-            <button class="close-btn" onclick="closePanel()">ESC</button>
+            <h3 id="panel-title">Wilayah</h3>
+            <button class="close-btn" onclick="closePanel()">KELUAR</button>
         </div>
         <div id="content"></div>
-        <button class="add-btn" id="show-add-form">Add Entry</button>
+        <button class="add-btn" id="show-add-form">TAMBAHKAN</button>
         
         <div id="form-container" style="display: none;">
             <form id="official-form">
                 <input type="hidden" id="edit-id">
-                <label> NAMA</label>
+                <label>NAMA</label>
                 <input type="text" id="form-nama" required>
                 <label>JABATAN</label>
                 <input type="text" id="form-jabatan" required>
@@ -144,8 +144,8 @@
                                 <small>Role: ${p.jabatan}</small><br>
                                 ${p.no_telp ? `<small>Telp: ${p.no_telp}</small>` : ''}
                                 <div class="btn-group">
-                                    <button class="edit-btn" onclick='showEditForm(${JSON.stringify(p)})'>MODIFY</button>
-                                    <button class="delete-btn" onclick="deleteOfficial(${p.id})">PURGE</button>
+                                    <button class="edit-btn" onclick='showEditForm(${JSON.stringify(p)})'>MODIFIKASI</button>
+                                    <button class="delete-btn" onclick="deleteOfficial(${p.id})">HAPUSKAN</button>
                                 </div>
                             </div>`;
                     });
